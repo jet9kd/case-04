@@ -6,6 +6,9 @@ from models import SurveySubmission, StoredSurveyRecord
 from storage import append_json_line
 import hashlib
 
+def compute_sha256(value: str) -> str:
+    return hashlib.sha256(value.encode()).hexdigest()
+
 app = Flask(__name__)
 # Allow cross-origin requests so the static HTML can POST from localhost or file://
 CORS(app, resources={r"/v1/*": {"origins": "*"}})
@@ -45,12 +48,13 @@ def submit_survey():
         ip=request.headers.get("X-Forwarded-For", request.remote_addr or "")
     )
 
+    raw_email = submission.email
     record.email = compute_sha256(record.email)
     record.age = compute_sha256(record.age)
 
     #Computed the hash of the connactination of email 
     # in the format of email + YYYYMMDDHH and set record.submission_id
-    record.submission_id = compute_sha256(record.email + datetime.now().strftime("%Y%m%d%H"))
+    record.submission_id = compute_sha256(raw_email + datetime.now().strftime("%Y%m%d%H"))
 
     # 
     # do the same for the age and calculating the age in the record
@@ -59,8 +63,6 @@ def submit_survey():
     return jsonify({"status": "ok"}), 201
 
 #this function computes the sha256 of the value that is passed in and return a string
-def compute_sha256(value: str) -> str:
-    return hashlib.sha256(value.encode()).hexdigest()
 
 if __name__ == "__main__":
-    app.run(port=0, debug=True)
+    app.run(port=5000, debug=True)
