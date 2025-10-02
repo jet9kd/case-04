@@ -6,7 +6,7 @@ from models import SurveySubmission, StoredSurveyRecord
 from storage import append_json_line
 import hashlib
 
-def compute_sha256(value: str) -> str:
+def sha256_hash(s: str) -> str:
     return hashlib.sha256(value.encode()).hexdigest()
 
 app = Flask(__name__)
@@ -33,32 +33,26 @@ def submit_survey():
     except ValidationError as ve:
         return jsonify({"error": "validation_error", "detail": ve.errors()}), 422
 
-    if not submission.submission_id:
-        email_norm = submission.email.lower().strip()
-        hour_stamp = datetime.now(timezone.utc).strftime("%Y%m%d%H")
-        raw = f"{email_norm}{hour_stamp}"
-        submission_id = sha256(raw.encode()).hexdigest()
-        submission.submission_id = submission_id
-    else:
-        submission_id = submission.submission_id
+    email_normalized = submission.email.lower().strip()
+    email_hash = sha256_hash(email_normalized)
+    age_hash = sha256_hash(str(submission.age))
+    hour_stamp = datetime.now(timezone.utc).strftime("%Y%m%d%H")
+    submission_id = sha256(raw.encode()).hexdigest()
+    submission_id = submission.submission_id or sha256_hash(email_normalized + hour_stamp)
 
     record = StoredSurveyRecord(
-        **submission.dict(),
+        name=submission.name,
+        email=email_hash,
+        age=age_hash,
+        consent=submission.consent,
+        rating=submission.rating,
+        comments=submission.comments,
+        user_agent=submission.user_agent,
+        submission_id=submission_id,
         received_at=datetime.now(timezone.utc),
         ip=request.headers.get("X-Forwarded-For", request.remote_addr or "")
     )
-
-    raw_email = submission.email
-    record.email = compute_sha256(record.email)
-    record.age = compute_sha256(record.age)
-
-    #Computed the hash of the connactination of email 
-    # in the format of email + YYYYMMDDHH and set record.submission_id
-    record.submission_id = compute_sha256(raw_email + datetime.now().strftime("%Y%m%d%H"))
-
-    # 
-    # do the same for the age and calculating the age in the record
-
+    
     append_json_line(record.dict())
     return jsonify({"status": "ok"}), 201
 
