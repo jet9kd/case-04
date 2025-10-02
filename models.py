@@ -23,8 +23,13 @@ class SurveySubmission(BaseModel):
         return v
 
 class StoredSurveyRecord(SurveySubmission):
-    received_at: datetime
-    ip: str
+    name: str 
     email: str
     age: str
-    submission_id: Optional[str] = None
+    consent: bool
+    rating: int 
+    comments: Optional[str] 
+    user_agent: Optional[str]
+    submission_id: Optional[str]
+    received_at: datetime
+    ip: str
