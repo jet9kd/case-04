@@ -6,7 +6,7 @@ from models import SurveySubmission, StoredSurveyRecord
 from storage import append_json_line
 import hashlib
 
-def sha256_hash(s: str) -> str:
+def sha256_hash(value: str) -> str:
     return hashlib.sha256(value.encode()).hexdigest()
 
 app = Flask(__name__)
@@ -37,7 +37,6 @@ def submit_survey():
     email_hash = sha256_hash(email_normalized)
     age_hash = sha256_hash(str(submission.age))
     hour_stamp = datetime.now(timezone.utc).strftime("%Y%m%d%H")
-    submission_id = sha256(raw.encode()).hexdigest()
     submission_id = submission.submission_id or sha256_hash(email_normalized + hour_stamp)
 
     record = StoredSurveyRecord(
